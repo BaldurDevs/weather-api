@@ -190,3 +190,5 @@ can be swapped out later if needed.
 ├── city_weather.csv        # Generated output (after running)
 └── humidity_by_city_chart.png   # Generated chart (after running)
 ```
+
+Author: [@nachoberaza](https://github.com/nachoberaza)
