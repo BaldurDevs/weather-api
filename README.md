@@ -163,6 +163,22 @@ crashing the whole run:
   rest of the pipeline from running.
 
 
+## APIs used
+ 
+The app relies on two free, keyless APIs from [Open-Meteo](https://open-meteo.com/en/docs):
+ 
+- **Geocoding API** — `https://geocoding-api.open-meteo.com/v1/search`
+  Converts a city name into latitude/longitude, plus extra info like
+  country and timezone. Called once per city, before the weather lookup,
+  since the weather endpoint needs coordinates rather than a name.
+- **Weather Forecast API** — `https://api.open-meteo.com/v1/forecast`
+  Given a latitude/longitude, returns current weather conditions. This
+  app requests `temperature_2m`, `relative_humidity_2m`, and
+  `wind_speed_10m` (wind speed comes back in km/h by default).
+Both are free and don't require an API key or sign-up — the two URLs above
+are just set via `.env` (see `OPEN_METEO_URL` / `GEOCODING_URL`) so they
+can be swapped out later if needed.
+
 ## Project structure
 
 ```
