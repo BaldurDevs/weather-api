@@ -86,7 +86,7 @@ python main.py
 Starts a persistent server so you can hit endpoints on demand.
 
 ```bash
-uvicorn main:app --reload
+uvicorn api:api --reload --host 0.0.0.0
 ```
 
 Then open **http://127.0.0.1:8000/docs** for an interactive Swagger UI
@@ -102,7 +102,7 @@ where you can try every endpoint from the browser, or use `curl`:
 | GET    | `/chart`  | Returns the humidity bar chart as a PNG image                        |
 
 ```bash
-# 1. Add cities (optional - 5 default cities are preloaded)
+# 1. Add cities (optional - 10 default cities are preloaded)
 curl -X POST http://127.0.0.1:8000/cities \
   -H "Content-Type: application/json" \
   -d '{"cities": ["Madrid", "Rome", "Cairo"]}'
@@ -117,7 +117,7 @@ curl http://127.0.0.1:8000/chart --output chart.png
 
 **Note:** `/cities` changes only live in memory. Restarting the server
 (or `--reload` picking up a code change) resets the city list back to the
-5 defaults - it doesn't persist added cities to disk.
+10 defaults - it doesn't persist added cities to disk.
 
 ## Output columns (CSV)
 
@@ -136,9 +136,10 @@ Rows are sorted by humidity, lowest first.
 
 ```
 .
-├── main.py                # Pipeline (fetch/process/persist/chart) + FastAPI app
+├── api.py                 # FastAPI app logic
+├── main.py                # Pipeline (fetch/process/persist/chart)
 ├── requirements.txt        # Python dependencies
-├── .env.example              # Template for required environment variables
-├── city_weather.csv          # Generated output (after running)
-└── temperature_chart.png     # Generated chart (after running)
+├── .env.example            # Template for required environment variables
+├── city_weather.csv        # Generated output (after running)
+└── temperature_chart.png   # Generated chart (after running)
 ```

@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 
 import matplotlib
 import requests
@@ -7,11 +6,6 @@ import pandas as pd
 from typing import Dict, List
 from dotenv import load_dotenv
 import matplotlib.pyplot as plt
-
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
-
-from pydantic import BaseModel, Field
 
 load_dotenv()
 
@@ -21,12 +15,18 @@ CHART_OUTPUT_PATH = os.getenv("CHART_FILE_PATH")
 OPEN_METEO_URL = os.getenv("OPEN_METEO_URL")
 GEOCODING_URL = os.getenv("GEOCODING_URL")
 
-DEFAULT_CITIES: List[Dict] = [
+INPUT_CITIES: List[Dict] = [
     {"City": "New York"},
     {"City": "Tokyo" },
     {"City": "London" },
     {"City": "Paris" },
     {"City": "Buenos Aires" },
+    {"City": "Sydney" },
+    {"City": "Berlin" },
+    {"City": "Melbourne" },
+    {"City": "Cape Town" },
+    {"City": "Mumbai"}
+
 ]
 
 DEFAULT_COLUMNS = [
@@ -41,19 +41,6 @@ DEFAULT_COLUMNS = [
     "Error",
 ]
 
-app = FastAPI(
-    title="Weather City Data API",
-    description="Serves weather data, a CSV export, and a humidity chart for a list of cities.",
-    version="v1.0.0",
-)
-
-class AddCitiesRequest(BaseModel):
-    cities: List[str] = Field(
-        ...,
-        min_length=1,
-        description="List of city names to add to the app.",
-        examples=[["Madrid", "Rome", "Cairo"]],
-    )
 
 def fetch_city_geocode(city: Dict, timeout: int = 1):
 
@@ -113,7 +100,8 @@ def fetch_city_weather(city: Dict, timeout: int = 1):
 # 1. Scrape Public Data
 def fetch_cities_data(cities: List[Dict], default_timeout: int = 10):
     for city in cities:
-        print(f"[info] fetching data from '{city["City"]}'...")
+        city_name = city["City"]
+        print(f"[info] fetching data from '{city_name}'...")
 
         fetch_city_geocode(city, default_timeout)
 
@@ -158,98 +146,10 @@ def generate_cities_humidity_chart(cities_data : pd.DataFrame) -> None:
         plt.close(fig)
 
 
-@app.get("/")
-def root():     # Basic health check / index.
-    return {
-        "status": "ok",
-        "endpoints": ["/refresh", "/csv", "/chart", "/cities"],
-    }
-
-@app.post("/refresh")
-def refresh_data():
-    fetch_cities_data(DEFAULT_CITIES)
-    cities_data = process_cities_data(DEFAULT_CITIES)
-    persist_cities_data(cities_data)
-    generate_cities_humidity_chart(cities_data)
-
-    return {"status": "ok", "cities_processed": len(DEFAULT_CITIES)}
-
-
-@app.get("/cities")
-def list_cities():
-    return DEFAULT_CITIES
-
-
-@app.post("/cities")
-def add_cities(request: AddCitiesRequest):
-    """
-    Add one or more cities to the app's city list.
-    Body: {"cities": ["Madrid", "Rome", "Cairo"]}
-
-    - Skips blank names.
-    - Skips names already present (case-insensitive), so calling this
-      repeatedly with the same city doesn't create duplicates.
-    - New cities have no weather data yet - call POST /refresh afterwards
-      to fetch it for the whole list, including the new additions.
-    """
-    existing_names = {c["City"].strip().lower() for c in DEFAULT_CITIES}
-
-    added = []
-    skipped = []
-    for raw_name in request.cities:
-        name = raw_name.strip()
-        if not name:
-            continue
-        if name.lower() in existing_names:
-            skipped.append(name)
-            continue
-        DEFAULT_CITIES.append({"City": name})
-        existing_names.add(name.lower())
-        added.append(name)
-
-    return {
-        "status": "ok",
-        "added": added,
-        "skipped_duplicates": skipped,
-        "total_cities": len(DEFAULT_CITIES),
-    }
-
-@app.get("/csv")
-def download_csv():
-    """
-    Serve the generated CSV file for download.
-    Returns 404 if it hasn't been generated yet - call POST /refresh first.
-    """
-    if not CSV_OUTPUT_PATH or not Path(CSV_OUTPUT_PATH).is_file():
-        raise HTTPException(
-            status_code=404,
-            detail="CSV not found yet. Call POST /refresh first to generate it.",
-        )
-    return FileResponse(
-        path=CSV_OUTPUT_PATH,
-        media_type="text/csv",
-        filename=os.path.basename(CSV_OUTPUT_PATH),
-    )
-
-
-@app.get("/chart")
-def get_chart():
-    """
-    Serve the generated humidity bar chart as a PNG image.
-    Returns 404 if it hasn't been generated yet - call POST /refresh first.
-    """
-    if not CHART_OUTPUT_PATH or not Path(CHART_OUTPUT_PATH).is_file():
-        raise HTTPException(
-            status_code=404,
-            detail="Chart not found yet. Call POST /refresh first to generate it.",
-        )
-    return FileResponse(path=CHART_OUTPUT_PATH, media_type="image/png")
-
-
 if __name__ == "__main__":
     load_dotenv()
-    fetch_cities_data(DEFAULT_CITIES)
-    cities_df = process_cities_data(DEFAULT_CITIES)
+    fetch_cities_data(INPUT_CITIES)
+    cities_df = process_cities_data(INPUT_CITIES)
     persist_cities_data(cities_df)
     generate_cities_humidity_chart(cities_df)
 
