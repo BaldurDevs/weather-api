@@ -42,13 +42,13 @@ DEFAULT_COLUMNS = [
 ]
 
 
-def fetch_city_geocode(city: Dict, timeout: int = 1):
+def fetch_city_geocode(city: Dict):
 
     city_name = city["City"]
     params = {"name": city_name, "count": 1, "language": "en", "format": "json"}
 
     try:
-        response = requests.get(GEOCODING_URL, params=params, timeout=timeout)
+        response = requests.get(GEOCODING_URL, params=params, timeout=DEFAULT_TIMEOUT)
         response.raise_for_status()
         results = response.json().get("results")
 
@@ -66,7 +66,7 @@ def fetch_city_geocode(city: Dict, timeout: int = 1):
         city["error"] = exc
         return None
 
-def fetch_city_weather(city: Dict, timeout: int = 1):
+def fetch_city_weather(city: Dict):
     params = {
         "latitude": city["Latitude"],
         "longitude": city["Longitude"],
@@ -75,7 +75,7 @@ def fetch_city_weather(city: Dict, timeout: int = 1):
     }
 
     try:
-        response = requests.get(OPEN_METEO_URL, params=params, timeout=timeout)
+        response = requests.get(OPEN_METEO_URL, params=params, timeout=DEFAULT_TIMEOUT)
         response.raise_for_status()
         data = response.json()
         current = data.get("current", {})
@@ -98,23 +98,23 @@ def fetch_city_weather(city: Dict, timeout: int = 1):
 
 
 # 1. Scrape Public Data
-def fetch_cities_data(cities: List[Dict], default_timeout: int = 10):
+def fetch_cities_data(cities: List[Dict]):
     for city in cities:
         city_name = city["City"]
         print(f"[info] fetching data from '{city_name}'...")
 
-        fetch_city_geocode(city, default_timeout)
+        fetch_city_geocode(city)
 
         if "Error" in city :
             continue
 
-        fetch_city_weather(city, default_timeout)
+        fetch_city_weather(city)
 
 # 2. Data Processing
 def process_cities_data(cities: List[Dict]) -> pd.DataFrame :
     dataframe = pd.DataFrame(cities, columns=DEFAULT_COLUMNS)
 
-    # Sort cities by humidity (lower at first)
+    # Sort cities by humidity (lowest at first)
     dataframe = dataframe.sort_values("Humidity (%)", ascending=True, na_position="last").reset_index(drop=True)
 
     return dataframe
@@ -134,7 +134,7 @@ def generate_cities_humidity_chart(cities_data : pd.DataFrame) -> None:
         bars = ax.bar(plot_df["City"], plot_df["Humidity (%)"], color="#ff6200")
 
         # Label each bar with its value
-        ax.bar_label(bars, fmt="%.1f°C")
+        ax.bar_label(bars, fmt="%.1f%%")
 
         ax.set_title("Current Humidity by City")
         ax.set_xlabel("City")

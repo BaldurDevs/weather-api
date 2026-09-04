@@ -43,7 +43,7 @@ def root():     # Basic health check / index.
 
 @api.post("/refresh")
 def refresh_data():
-    app.fetch_cities_data(app.INPUT_CITIES, app.DEFAULT_TIMEOUT)
+    app.fetch_cities_data(app.INPUT_CITIES)
     cities_data = app.process_cities_data(app.INPUT_CITIES)
     app.persist_cities_data(cities_data)
     app.generate_cities_humidity_chart(cities_data)

@@ -58,7 +58,7 @@ cp .env.example .env
 ```
 WEATHER_APP_TIMEOUT=10
 CSV_FILE_PATH=city_weather.csv
-CHART_FILE_PATH=temperature_chart.png
+CHART_FILE_PATH=humidity_by_city_chart.png
 OPEN_METEO_URL=https://api.open-meteo.com/v1/forecast
 GEOCODING_URL=https://geocoding-api.open-meteo.com/v1/search
 ```
@@ -75,11 +75,27 @@ There are two ways to use the app: as a one-off script, or as a running API.
 ### Option A — Run once as a script
 
 Fetches weather for the 5 default cities, saves `city_weather.csv`, and
-generates `temperature_chart.png`, then exits.
+generates `humidity_by_city_chart.png`, then exits.
 
 ```bash
 python main.py
 ```
+
+**What happens, step by step:**
+ 
+1. Loads the `.env` variables.
+2. For each city in the default list (New York, Tokyo, London, Paris,
+   Buenos Aires): looks up its latitude/longitude via the geocoding API.
+3. For each city that geocoded successfully: fetches its current
+   temperature, humidity, and wind speed from Open-Meteo, and calculates
+   the Fahrenheit/mph conversions. Cities that failed geocoding are
+   skipped at this step (see "Error handling" below).
+4. Builds a pandas DataFrame from all the cities and sorts it by humidity
+   (lowest first).
+5. Saves that DataFrame to `city_weather.csv`.
+6. Generates a bar chart of humidity by city and saves it as
+   `humidity_by_city_chart.png`.
+7. Prints `"fetching data process is done."` and exits.
 
 ### Option B — Run as a web API
 
@@ -112,7 +128,7 @@ curl -X POST http://127.0.0.1:8000/refresh
 
 # 3. Download the results
 curl http://127.0.0.1:8000/csv --output city_weather.csv
-curl http://127.0.0.1:8000/chart --output chart.png
+curl http://127.0.0.1:8000/chart --output humidity_by_city_chart.png
 ```
 
 **Note:** `/cities` changes only live in memory. Restarting the server
@@ -132,6 +148,21 @@ curl http://127.0.0.1:8000/chart --output chart.png
 
 Rows are sorted by humidity, lowest first.
 
+## Error handling
+ 
+If geocoding or weather retrieval fails for a city (bad city name, network
+issue, API error, timeout, etc.), that failure is recorded rather than
+crashing the whole run:
+ 
+- **CSV**: the city's row is still included, with its `Error` column
+  filled in describing what went wrong, and its weather columns
+  (`Temperature (C)`, `Humidity (%)`, etc.) left blank.
+- **Chart**: that city is **omitted** from `humidity_by_city_chart.png` /
+  the humidity chart, since it has no humidity value to plot.
+- **Other cities are unaffected** - one failing city doesn't stop the
+  rest of the pipeline from running.
+
+
 ## Project structure
 
 ```
@@ -141,5 +172,5 @@ Rows are sorted by humidity, lowest first.
 ├── requirements.txt        # Python dependencies
 ├── .env.example            # Template for required environment variables
 ├── city_weather.csv        # Generated output (after running)
-└── temperature_chart.png   # Generated chart (after running)
+└── humidity_by_city_chart.png   # Generated chart (after running)
 ```
